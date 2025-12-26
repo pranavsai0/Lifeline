@@ -1,6 +1,7 @@
 package com.lifeline.openicu.exception;
 
-import com.lifeline.openicu.bed.exception.BedNotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -31,19 +32,57 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(BedNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleBedNotFoundException(
-            BedNotFoundException ex, WebRequest request) {
+    @ExceptionHandler(InvalidSearchCriteriaException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSearchCriteriaException(
+            InvalidSearchCriteriaException ex, WebRequest request) {
         
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.NOT_FOUND.value(),
-                "Not Found",
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
                 ex.getMessage(),
                 request.getDescription(false).replace("uri=", "")
         );
         
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidCoordinatesException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCoordinatesException(
+            InvalidCoordinatesException ex, WebRequest request) {
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
+            ConstraintViolationException ex, WebRequest request) {
+        
+        List<String> details = new ArrayList<>();
+        for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
+            String propertyPath = violation.getPropertyPath().toString();
+            String message = violation.getMessage();
+            details.add(propertyPath + ": " + message);
+        }
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Failed",
+                "Constraint violation in request parameters",
+                request.getDescription(false).replace("uri=", "")
+        );
+        errorResponse.setDetails(details);
+        
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
